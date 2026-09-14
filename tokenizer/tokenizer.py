@@ -4,7 +4,10 @@ import json
 
 class SimpleTokenizer:
     def __init__(self, text):
-        words = re.findall(r"\w+|[^\w\s]", text.lower())
+        words = re.findall(
+            r"\w+|[^\w\s]",
+            text.lower()
+        )
 
         vocabulary = sorted(set(words))
 
@@ -54,4 +57,9 @@ class SimpleTokenizer:
 
     def save(self, path):
         with open(path, "w", encoding="utf-8") as file:
-            json.dump(self.token_to_id, file, indent=4)
+            json.dump(
+                self.token_to_id,
+                file,
+                indent=4,
+                ensure_ascii=False
+            )

@@ -5,7 +5,13 @@ from tokenizer.tokenizer import SimpleTokenizer
 
 
 class TourismDataset(Dataset):
-    def __init__(self, corpus_path, context_length=128):
+
+    def __init__(
+        self,
+        corpus_path,
+        tokenizer_path,
+        context_length=128
+    ):
 
         with open(
             corpus_path,
@@ -14,9 +20,13 @@ class TourismDataset(Dataset):
         ) as file:
             text = file.read()
 
-        self.tokenizer = SimpleTokenizer(text)
+        self.tokenizer = SimpleTokenizer.load(
+            tokenizer_path
+        )
 
-        self.tokens = self.tokenizer.encode(text)
+        self.tokens = self.tokenizer.encode(
+            text
+        )
 
         self.context_length = context_length
 
@@ -40,6 +50,12 @@ class TourismDataset(Dataset):
         ]
 
         return (
-            torch.tensor(input_tokens, dtype=torch.long),
-            torch.tensor(target_tokens, dtype=torch.long)
+            torch.tensor(
+                input_tokens,
+                dtype=torch.long
+            ),
+            torch.tensor(
+                target_tokens,
+                dtype=torch.long
+            )
         )

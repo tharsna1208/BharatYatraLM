@@ -1,4 +1,5 @@
 import json
+import random
 
 
 def format_list(value):
@@ -41,7 +42,10 @@ def clean_text(text):
 
 
 input_file = "data/india_tourism_dataset.json"
+
 output_file = "data/tourism_corpus.txt"
+train_file = "data/tourism_train.txt"
+validation_file = "data/tourism_validation.txt"
 
 
 with open(
@@ -65,6 +69,7 @@ for destination in destinations:
     state = destination.get("state", "")
     district = destination.get("district", "")
     region = destination.get("region", "")
+
     accessibility = destination.get(
         "accessibility",
         ""
@@ -230,7 +235,6 @@ for destination in destinations:
         ""
     )
 
-
     text = f"""
 {name} is a tourist destination in {state}, {region}.
 It is located in {district}.
@@ -269,10 +273,24 @@ Sustainability information: {sustainability}.
 User review summary: {reviews}.
 """
 
-
     corpus.append(
         clean_text(text)
     )
+
+
+random.seed(42)
+
+random.shuffle(corpus)
+
+
+split_index = int(
+    len(corpus) * 0.9
+)
+
+
+train_corpus = corpus[:split_index]
+
+validation_corpus = corpus[split_index:]
 
 
 with open(
@@ -286,17 +304,54 @@ with open(
     )
 
 
+with open(
+    train_file,
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(
+        "\n\n".join(train_corpus)
+    )
+
+
+with open(
+    validation_file,
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(
+        "\n\n".join(validation_corpus)
+    )
+
+
 print(
     "Number of destinations:",
     len(destinations)
 )
 
 print(
-    "Number of training documents:",
-    len(corpus)
+    "Training documents:",
+    len(train_corpus)
 )
 
 print(
-    "Corpus saved to:",
+    "Validation documents:",
+    len(validation_corpus)
+)
+
+print(
+    "Full corpus saved to:",
     output_file
+)
+
+print(
+    "Training corpus saved to:",
+    train_file
+)
+
+print(
+    "Validation corpus saved to:",
+    validation_file
 )

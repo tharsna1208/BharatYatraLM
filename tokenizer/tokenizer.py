@@ -56,10 +56,37 @@ class SimpleTokenizer:
         )
 
     def save(self, path):
-        with open(path, "w", encoding="utf-8") as file:
+        with open(
+            path,
+            "w",
+            encoding="utf-8"
+        ) as file:
             json.dump(
                 self.token_to_id,
                 file,
                 indent=4,
                 ensure_ascii=False
             )
+
+    @classmethod
+    def load(cls, path):
+        with open(
+            path,
+            "r",
+            encoding="utf-8"
+        ) as file:
+            token_to_id = json.load(file)
+
+        tokenizer = cls.__new__(cls)
+
+        tokenizer.token_to_id = {
+            token: int(token_id)
+            for token, token_id in token_to_id.items()
+        }
+
+        tokenizer.id_to_token = {
+            token_id: token
+            for token, token_id in tokenizer.token_to_id.items()
+        }
+
+        return tokenizer

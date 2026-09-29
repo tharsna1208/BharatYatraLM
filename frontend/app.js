@@ -1,281 +1,706 @@
-const API_URL = "http://127.0.0.1:8000";
-
-const splashScreen = document.getElementById("splashScreen");
-const emptyState = document.getElementById("emptyState");
-const userInput = document.getElementById("userInput");
-const sendButton = document.getElementById("sendButton");
-const voiceButton = document.getElementById("voiceButton");
-const voiceIcon = document.getElementById("voiceIcon");
-const voiceStatus = document.getElementById("voiceStatus");
 const chatMessages = document.getElementById("chatMessages");
+const chatInput = document.getElementById("userInput");
+const sendButton = document.getElementById("sendButton");
 const newChatButton = document.getElementById("newChatButton");
 const themeToggle = document.getElementById("themeToggle");
 const themeIcon = document.getElementById("themeIcon");
 const themeText = document.getElementById("themeText");
-const examplePrompts = document.querySelectorAll(".example-prompt");
+const voiceButton = document.getElementById("voiceButton");
+const voiceStatus = document.getElementById("voiceStatus");
+const emptyState = document.getElementById("emptyState");
+const splashScreen = document.getElementById("splashScreen");
 
-let hasMessages = false;
+const API_URL = "http://127.0.0.1:8000";
+
 let recognition = null;
 let isListening = false;
+let isTypingResponse = false;
 
 
-function setMicrophoneIcon() {
-
-    voiceIcon.innerHTML = `
-        <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"></path>
-        <path d="M19 11a7 7 0 0 1-14 0"></path>
-        <path d="M12 18v4"></path>
-        <path d="M8 22h8"></path>
-    `;
-
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text ?? "";
+    return div.innerHTML;
 }
 
 
-function setStopIcon() {
+function scrollToLatest(behavior = "smooth") {
+    requestAnimationFrame(() => {
+        chatMessages.scrollTo({
+            top: chatMessages.scrollHeight,
+            behavior: behavior
+        });
 
-    voiceIcon.innerHTML = `
-        <path d="M7 7h10v10H7z"></path>
-    `;
-
+        window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: behavior
+        });
+    });
 }
 
 
-function applyTheme(theme) {
+function addMessage(content, sender = "bot") {
 
-    if (theme === "dark") {
+    const message = document.createElement("div");
 
-        document.body.classList.add("dark-mode");
-
-        themeIcon.textContent = "☀";
-
-        themeText.textContent = "Light Mode";
-
+    if (sender === "user") {
+        message.className = "message user-message";
     } else {
-
-        document.body.classList.remove("dark-mode");
-
-        themeIcon.textContent = "☾";
-
-        themeText.textContent = "Dark Mode";
-
+        message.className = "message bot-message";
     }
 
-    localStorage.setItem(
-        "bharatYatraTheme",
-        theme
-    );
 
-}
+    const label = document.createElement("div");
 
-
-function loadTheme() {
-
-    const savedTheme =
-        localStorage.getItem(
-            "bharatYatraTheme"
-        );
-
-    if (savedTheme) {
-
-        applyTheme(savedTheme);
-
-    } else {
-
-        applyTheme("light");
-
-    }
-
-}
-
-
-loadTheme();
-
-
-themeToggle.addEventListener(
-    "click",
-    () => {
-
-        const isDark =
-            document.body.classList.contains(
-                "dark-mode"
-            );
-
-        applyTheme(
-            isDark
-                ? "light"
-                : "dark"
-        );
-
-    }
-);
-
-
-window.addEventListener(
-    "load",
-    () => {
-
-        setTimeout(
-            () => {
-
-                splashScreen.classList.add(
-                    "hide"
-                );
-
-                userInput.focus();
-
-            },
-            700
-        );
-
-    }
-);
-
-
-function addMessage(
-    message,
-    type
-) {
-
-    const messageContainer =
-        document.createElement(
-            "div"
-        );
-
-    messageContainer.classList.add(
-        "message",
-        type === "user"
-            ? "user-message"
-            : "bot-message"
-    );
-
-
-    const label =
-        document.createElement(
-            "div"
-        );
-
-    label.classList.add(
-        "message-label"
-    );
+    label.className = "message-label";
 
     label.textContent =
-        type === "user"
+        sender === "user"
             ? "You"
             : "BharatYatraLM";
 
 
-    const text =
-        document.createElement(
-            "div"
-        );
+    const messageText =
+        document.createElement("div");
 
-    text.classList.add(
-        "message-text"
-    );
+    messageText.className =
+        "message-text";
 
-    text.textContent =
-        message;
+    messageText.innerHTML =
+        content;
 
 
-    messageContainer.appendChild(
-        label
-    );
+    message.appendChild(label);
+    message.appendChild(messageText);
 
-    messageContainer.appendChild(
-        text
-    );
+    chatMessages.appendChild(message);
 
-    chatMessages.appendChild(
-        messageContainer
-    );
+    scrollToLatest();
 
-
-    messageContainer.scrollIntoView(
-        {
-            behavior: "smooth",
-            block: "nearest"
-        }
-    );
-
+    return messageText;
 }
 
 
-function showChat() {
+function addUserMessage(text) {
 
-    if (!hasMessages) {
-
-        hasMessages = true;
-
-        emptyState.style.display =
-            "none";
-
+    if (emptyState) {
+        emptyState.style.display = "none";
     }
-
-}
-
-
-function setLoading(
-    isLoading
-) {
-
-    sendButton.disabled =
-        isLoading;
-
-    if (isLoading) {
-
-        sendButton.textContent =
-            "⋯";
-
-    } else {
-
-        sendButton.textContent =
-            "↑";
-
-    }
-
-}
-
-
-async function sendMessage(
-    message = null
-) {
-
-    const text =
-        message !== null
-            ? message.trim()
-            : userInput.value.trim();
-
-
-    if (!text) {
-
-        return;
-
-    }
-
-
-    if (isListening) {
-
-        stopVoiceRecognition();
-
-    }
-
-
-    showChat();
-
 
     addMessage(
-        text,
+        escapeHtml(text),
         "user"
     );
 
-
-    userInput.value = "";
-
-    userInput.style.height =
-        "auto";
+    scrollToLatest();
+}
 
 
-    setLoading(true);
+function showTyping() {
+
+    const message =
+        document.createElement("div");
+
+    message.className =
+        "message bot-message";
+
+    message.id =
+        "typingMessage";
+
+
+    const label =
+        document.createElement("div");
+
+    label.className =
+        "message-label";
+
+    label.textContent =
+        "BharatYatraLM";
+
+
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "typing";
+
+
+    bubble.innerHTML = `
+        <span></span>
+        <span></span>
+        <span></span>
+    `;
+
+
+    message.appendChild(label);
+    message.appendChild(bubble);
+
+    chatMessages.appendChild(message);
+
+    scrollToLatest();
+}
+
+
+function removeTyping() {
+
+    const typingMessage =
+        document.getElementById(
+            "typingMessage"
+        );
+
+    if (typingMessage) {
+        typingMessage.remove();
+    }
+}
+
+
+function typeResponse(element, html) {
+
+    return new Promise(resolve => {
+
+        isTypingResponse = true;
+
+        const temp =
+            document.createElement("div");
+
+        temp.innerHTML = html;
+
+
+        const nodes =
+            Array.from(temp.childNodes);
+
+
+        element.innerHTML = "";
+
+        let nodeIndex = 0;
+
+
+        function processNode() {
+
+            if (nodeIndex >= nodes.length) {
+
+                isTypingResponse = false;
+
+                scrollToLatest();
+
+                resolve();
+
+                return;
+            }
+
+
+            const originalNode =
+                nodes[nodeIndex];
+
+
+            if (
+                originalNode.nodeType ===
+                Node.TEXT_NODE
+            ) {
+
+                typeTextNode(
+                    element,
+                    originalNode.textContent,
+                    () => {
+                        nodeIndex++;
+                        processNode();
+                    }
+                );
+
+            } else {
+
+                const newElement =
+                    document.createElement(
+                        originalNode.nodeName
+                    );
+
+
+                Array.from(
+                    originalNode.attributes || []
+                ).forEach(attribute => {
+
+                    newElement.setAttribute(
+                        attribute.name,
+                        attribute.value
+                    );
+                });
+
+
+                element.appendChild(
+                    newElement
+                );
+
+
+                typeElementContents(
+                    newElement,
+                    originalNode,
+                    () => {
+                        nodeIndex++;
+                        processNode();
+                    }
+                );
+            }
+        }
+
+
+        processNode();
+    });
+}
+
+
+function typeElementContents(
+    target,
+    source,
+    callback
+) {
+
+    const children =
+        Array.from(source.childNodes);
+
+
+    if (children.length === 0) {
+
+        callback();
+
+        return;
+    }
+
+
+    let index = 0;
+
+
+    function processChild() {
+
+        if (index >= children.length) {
+
+            callback();
+
+            return;
+        }
+
+
+        const child =
+            children[index];
+
+
+        if (
+            child.nodeType ===
+            Node.TEXT_NODE
+        ) {
+
+            typeTextNode(
+                target,
+                child.textContent,
+                () => {
+
+                    index++;
+
+                    processChild();
+                }
+            );
+
+        } else {
+
+            const newElement =
+                document.createElement(
+                    child.nodeName
+                );
+
+
+            Array.from(
+                child.attributes || []
+            ).forEach(attribute => {
+
+                newElement.setAttribute(
+                    attribute.name,
+                    attribute.value
+                );
+            });
+
+
+            target.appendChild(
+                newElement
+            );
+
+
+            typeElementContents(
+                newElement,
+                child,
+                () => {
+
+                    index++;
+
+                    processChild();
+                }
+            );
+        }
+    }
+
+
+    processChild();
+}
+
+
+function typeTextNode(
+    target,
+    text,
+    callback
+) {
+
+    const words =
+        text.split(/(\s+)/);
+
+
+    let index = 0;
+
+
+    function addNextWord() {
+
+        if (index >= words.length) {
+
+            callback();
+
+            return;
+        }
+
+
+        target.appendChild(
+            document.createTextNode(
+                words[index]
+            )
+        );
+
+
+        index++;
+
+
+        scrollToLatest("auto");
+
+
+        setTimeout(
+            addNextWord,
+            35
+        );
+    }
+
+
+    addNextWord();
+}
+
+
+function formatItinerary(data) {
+
+    if (!data) {
+        return "I couldn't generate an itinerary.";
+    }
+
+
+    let html = `
+        <div class="response-title">
+            ${escapeHtml(data.destination || "")} itinerary
+        </div>
+    `;
+
+
+    if (
+        data.minimum_days !== undefined &&
+        data.maximum_days !== undefined
+    ) {
+
+        html += `
+            <div class="response-info">
+                Recommended duration:
+                ${data.minimum_days}–${data.maximum_days} days
+            </div>
+        `;
+    }
+
+
+    if (data.ideal_days !== undefined) {
+
+        html += `
+            <div class="response-info">
+                Ideal duration:
+                ${data.ideal_days} days
+            </div>
+        `;
+    }
+
+
+    if (
+        Array.isArray(data.days) &&
+        data.days.length > 0
+    ) {
+
+        html += `
+            <div class="itinerary-list">
+        `;
+
+
+        data.days.forEach(day => {
+
+            html += `
+                <div class="itinerary-item">
+
+                    <div class="itinerary-day">
+                        ${escapeHtml(day.day || "")}
+                    </div>
+
+                    <div class="itinerary-reason">
+                        ${escapeHtml(day.reason || "")}
+                    </div>
+
+                </div>
+            `;
+        });
+
+
+        html += `
+            </div>
+        `;
+    }
+
+
+    return html;
+}
+
+
+function formatNearby(data) {
+
+    if (
+        !data ||
+        !Array.isArray(data.results)
+    ) {
+
+        return "I couldn't find nearby destinations.";
+    }
+
+
+    if (data.results.length === 0) {
+
+        return "I couldn't find nearby destinations within the requested radius.";
+    }
+
+
+    let html = `
+        <div class="response-title">
+            Nearby destinations around
+            ${escapeHtml(data.destination || "")}
+        </div>
+
+        <div class="nearby-list">
+    `;
+
+
+    data.results.forEach(place => {
+
+        const distance =
+            Number(place.distance_km);
+
+
+        html += `
+            <div class="nearby-item">
+
+                <div class="nearby-name">
+                    ${escapeHtml(
+                        place.destination_name || ""
+                    )}
+                </div>
+
+                <div class="nearby-distance">
+                    ${
+                        Number.isFinite(distance)
+                            ? distance.toFixed(1)
+                            : "N/A"
+                    } km away
+                </div>
+
+            </div>
+        `;
+    });
+
+
+    html += `
+        </div>
+    `;
+
+
+    return html;
+}
+
+
+function formatRecommendations(data) {
+
+    if (
+        !Array.isArray(data) ||
+        data.length === 0
+    ) {
+
+        return "I couldn't find matching destinations.";
+    }
+
+
+    let html = `
+        <div class="response-title">
+            Destinations matching your preferences
+        </div>
+
+        <div class="recommendation-list">
+    `;
+
+
+    data.forEach((place, index) => {
+
+        html += `
+            <div class="recommendation-item">
+
+                <div class="recommendation-rank">
+                    ${index + 1}
+                </div>
+
+                <div class="recommendation-content">
+
+                    <div class="recommendation-name">
+                        ${escapeHtml(
+                            place.destination_name || ""
+                        )}
+                    </div>
+
+                    <div class="recommendation-details">
+                        Trip:
+                        ${place.ideal_trip_days ?? "N/A"} days
+                        · Safety:
+                        ${place.safety_rating ?? "N/A"}/10
+                    </div>
+
+                    <div class="recommendation-explanation">
+                        ${escapeHtml(
+                            place.explanation || ""
+                        )}
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+    });
+
+
+    html += `
+        </div>
+    `;
+
+
+    return html;
+}
+
+
+function formatChat(data, message) {
+
+    if (message) {
+        return escapeHtml(message);
+    }
+
+
+    if (
+        data &&
+        data.answer
+    ) {
+
+        return escapeHtml(
+            data.answer
+        );
+    }
+
+
+    return "I couldn't generate a response.";
+}
+
+
+function formatResponse(response) {
+
+    const intent =
+        response.intent;
+
+    const data =
+        response.data;
+
+
+    if (intent === "itinerary") {
+
+        return `
+            <div class="response-intro">
+                ${escapeHtml(
+                    response.message ||
+                    "Here is your personalized itinerary."
+                )}
+            </div>
+
+            ${formatItinerary(data)}
+        `;
+    }
+
+
+    if (intent === "nearby") {
+
+        return `
+            <div class="response-intro">
+                ${escapeHtml(
+                    response.message ||
+                    "Here are some nearby destinations."
+                )}
+            </div>
+
+            ${formatNearby(data)}
+        `;
+    }
+
+
+    if (intent === "recommendation") {
+
+        return `
+            <div class="response-intro">
+                ${escapeHtml(
+                    response.message ||
+                    "Here are some destinations that match your preferences."
+                )}
+            </div>
+
+            ${formatRecommendations(data)}
+        `;
+    }
+
+
+    return formatChat(
+        data,
+        response.message
+    );
+}
+
+
+async function sendMessage() {
+
+    if (isTypingResponse) {
+        return;
+    }
+
+
+    const message =
+        chatInput.value.trim();
+
+
+    if (!message) {
+        return;
+    }
+
+
+    addUserMessage(message);
+
+    chatInput.value = "";
+
+    showTyping();
+
+    sendButton.disabled = true;
 
 
     try {
@@ -291,11 +716,9 @@ async function sendMessage(
                             "application/json"
                     },
 
-                    body: JSON.stringify(
-                        {
-                            message: text
-                        }
-                    )
+                    body: JSON.stringify({
+                        message: message
+                    })
                 }
             );
 
@@ -303,9 +726,8 @@ async function sendMessage(
         if (!response.ok) {
 
             throw new Error(
-                "API request failed"
+                `HTTP ${response.status}`
             );
-
         }
 
 
@@ -313,28 +735,92 @@ async function sendMessage(
             await response.json();
 
 
-        addMessage(
-            data.answer ||
-            "I could not find a suitable answer.",
-            "bot"
+        removeTyping();
+
+
+        const messageElement =
+            addMessage(
+                "",
+                "bot"
+            );
+
+
+        const formattedResponse =
+            formatResponse(data);
+
+
+        await typeResponse(
+            messageElement,
+            formattedResponse
         );
 
 
     } catch (error) {
+
+        removeTyping();
+
 
         addMessage(
             "I couldn't connect to BharatYatraLM. Please make sure the FastAPI server is running.",
             "bot"
         );
 
+
+        console.error(error);
+
+
     } finally {
 
-        setLoading(false);
+        sendButton.disabled = false;
 
-        userInput.focus();
+        chatInput.focus();
+    }
+}
 
+
+function startNewChat() {
+
+    chatMessages.innerHTML = "";
+
+    if (emptyState) {
+        emptyState.style.display = "";
     }
 
+    chatInput.value = "";
+
+    chatInput.focus();
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+
+function attachExamplePromptEvents() {
+
+    const prompts =
+        document.querySelectorAll(
+            ".example-prompt"
+        );
+
+
+    prompts.forEach(prompt => {
+
+        prompt.addEventListener(
+            "click",
+            () => {
+
+                const text =
+                    prompt.textContent.trim();
+
+                chatInput.value =
+                    text;
+
+                sendMessage();
+            }
+        );
+    });
 }
 
 
@@ -351,29 +837,14 @@ function setupVoiceRecognition() {
             "click",
             () => {
 
-                voiceStatus.textContent =
-                    "Voice input is not supported in this browser.";
-
-                voiceStatus.classList.add(
-                    "active"
+                addMessage(
+                    "Voice input is not supported by this browser. Please use Chrome or another browser with Speech Recognition support.",
+                    "bot"
                 );
-
-                setTimeout(
-                    () => {
-
-                        voiceStatus.classList.remove(
-                            "active"
-                        );
-
-                    },
-                    3000
-                );
-
             }
         );
 
         return;
-
     }
 
 
@@ -381,27 +852,26 @@ function setupVoiceRecognition() {
         new SpeechRecognition();
 
 
+    recognition.lang =
+        "en-IN";
+
     recognition.continuous =
         false;
 
     recognition.interimResults =
         true;
 
-    recognition.lang =
-        "en-IN";
+
+    recognition.onstart = () => {
+
+        isListening = true;
+
+        voiceButton.classList.add(
+            "listening"
+        );
 
 
-    recognition.onstart =
-        () => {
-
-            isListening =
-                true;
-
-            voiceButton.classList.add(
-                "listening"
-            );
-
-            setStopIcon();
+        if (voiceStatus) {
 
             voiceStatus.textContent =
                 "Listening...";
@@ -409,15 +879,15 @@ function setupVoiceRecognition() {
             voiceStatus.classList.add(
                 "active"
             );
-
-        };
+        }
+    };
 
 
     recognition.onresult =
-        (event) => {
+        event => {
 
-            let transcript =
-                "";
+            let transcript = "";
+
 
             for (
                 let i = event.resultIndex;
@@ -426,158 +896,186 @@ function setupVoiceRecognition() {
             ) {
 
                 transcript +=
-                    event.results[i][0].transcript;
-
+                    event.results[i][0]
+                        .transcript;
             }
 
 
-            userInput.value =
+            chatInput.value =
                 transcript;
-
-            userInput.style.height =
-                "auto";
-
-            userInput.style.height =
-                Math.min(
-                    userInput.scrollHeight,
-                    130
-                ) + "px";
-
         };
+
+
+    recognition.onend = () => {
+
+        isListening = false;
+
+        voiceButton.classList.remove(
+            "listening"
+        );
+
+
+        if (voiceStatus) {
+
+            voiceStatus.textContent =
+                "";
+
+            voiceStatus.classList.remove(
+                "active"
+            );
+        }
+    };
 
 
     recognition.onerror =
-        (event) => {
+        error => {
 
-            if (
-                event.error ===
-                "not-allowed"
-            ) {
+            console.error(error);
 
-                voiceStatus.textContent =
-                    "Microphone permission was denied.";
-
-            } else if (
-                event.error ===
-                "no-speech"
-            ) {
-
-                voiceStatus.textContent =
-                    "I didn't hear anything.";
-
-            } else {
-
-                voiceStatus.textContent =
-                    "Voice input stopped.";
-
-            }
-
-            voiceStatus.classList.add(
-                "active"
-            );
-
-        };
-
-
-    recognition.onend =
-        () => {
-
-            isListening =
-                false;
+            isListening = false;
 
             voiceButton.classList.remove(
                 "listening"
             );
 
-            setMicrophoneIcon();
+
+            if (voiceStatus) {
+
+                voiceStatus.textContent =
+                    "";
+
+                voiceStatus.classList.remove(
+                    "active"
+                );
+            }
+        };
+
+
+    voiceButton.addEventListener(
+        "click",
+        () => {
+
+            if (isListening) {
+
+                recognition.stop();
+
+            } else {
+
+                recognition.start();
+            }
+        }
+    );
+}
+
+
+function updateThemeButton() {
+
+    const darkModeEnabled =
+        document.body.classList.contains(
+            "dark-mode"
+        );
+
+
+    if (themeIcon) {
+
+        themeIcon.textContent =
+            darkModeEnabled
+                ? "☀"
+                : "☾";
+    }
+
+
+    if (themeText) {
+
+        themeText.textContent =
+            darkModeEnabled
+                ? "Light Mode"
+                : "Dark Mode";
+    }
+}
+
+
+function setupTheme() {
+
+    const savedTheme =
+        localStorage.getItem(
+            "bharatyatralm-theme"
+        );
+
+
+    if (savedTheme === "dark") {
+
+        document.body.classList.add(
+            "dark-mode"
+        );
+    }
+
+
+    updateThemeButton();
+
+
+    themeToggle.addEventListener(
+        "click",
+        () => {
+
+            document.body.classList.toggle(
+                "dark-mode"
+            );
+
+
+            const darkModeEnabled =
+                document.body.classList.contains(
+                    "dark-mode"
+                );
+
+
+            localStorage.setItem(
+                "bharatyatralm-theme",
+                darkModeEnabled
+                    ? "dark"
+                    : "light"
+            );
+
+
+            updateThemeButton();
+        }
+    );
+}
+
+
+function setupSplashScreen() {
+
+    window.addEventListener(
+        "load",
+        () => {
 
             setTimeout(
                 () => {
 
-                    voiceStatus.classList.remove(
-                        "active"
-                    );
+                    if (splashScreen) {
+
+                        splashScreen.classList.add(
+                            "hide"
+                        );
+                    }
 
                 },
-                1800
+                700
             );
-
-        };
-
+        }
+    );
 }
-
-
-function startVoiceRecognition() {
-
-    if (!recognition) {
-
-        return;
-
-    }
-
-
-    if (isListening) {
-
-        stopVoiceRecognition();
-
-        return;
-
-    }
-
-
-    try {
-
-        recognition.start();
-
-    } catch (error) {
-
-        stopVoiceRecognition();
-
-    }
-
-}
-
-
-function stopVoiceRecognition() {
-
-    if (
-        recognition &&
-        isListening
-    ) {
-
-        recognition.stop();
-
-    }
-
-}
-
-
-setupVoiceRecognition();
-
-
-voiceButton.addEventListener(
-    "click",
-    () => {
-
-        startVoiceRecognition();
-
-    }
-);
 
 
 sendButton.addEventListener(
     "click",
-    () => {
-
-        sendMessage();
-
-    }
+    sendMessage
 );
 
 
-userInput.addEventListener(
+chatInput.addEventListener(
     "keydown",
-    (event) => {
+    event => {
 
         if (
             event.key === "Enter" &&
@@ -587,90 +1085,21 @@ userInput.addEventListener(
             event.preventDefault();
 
             sendMessage();
-
         }
-
-    }
-);
-
-
-userInput.addEventListener(
-    "input",
-    () => {
-
-        userInput.style.height =
-            "auto";
-
-        userInput.style.height =
-            Math.min(
-                userInput.scrollHeight,
-                130
-            ) + "px";
-
-    }
-);
-
-
-examplePrompts.forEach(
-    (button) => {
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                const label =
-                    button.querySelector(
-                        "span"
-                    );
-
-                const question =
-                    button.textContent
-                        .replace(
-                            label
-                                ? label.textContent
-                                : "",
-                            ""
-                        )
-                        .trim();
-
-                sendMessage(
-                    question
-                );
-
-            }
-        );
-
     }
 );
 
 
 newChatButton.addEventListener(
     "click",
-    () => {
-
-        if (isListening) {
-
-            stopVoiceRecognition();
-
-        }
-
-
-        chatMessages.innerHTML =
-            "";
-
-        hasMessages =
-            false;
-
-        emptyState.style.display =
-            "block";
-
-        userInput.value =
-            "";
-
-        userInput.style.height =
-            "auto";
-
-        userInput.focus();
-
-    }
+    startNewChat
 );
+
+
+attachExamplePromptEvents();
+
+setupVoiceRecognition();
+
+setupTheme();
+
+setupSplashScreen();

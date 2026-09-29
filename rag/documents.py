@@ -7,7 +7,7 @@ def clean_text(text):
     text = str(text)
 
     text = re.sub(
-        r"\[web:\d+\]",
+        r"\[\s*web:\d+\s*\]",
         "",
         text
     )
@@ -140,8 +140,11 @@ def create_destination_document(
 
     document = f"""
 Destination: {name}
+
 State: {state}
+
 District: {district}
+
 Region: {region}
 
 Main attractions: {format_list(attractions)}
@@ -155,21 +158,27 @@ Best seasons: {format_list(best_seasons)}
 Ideal for: {format_list(ideal_for)}
 
 Why it is suitable:
+
 {format_dict(ideal_for_why)}
 
 Suggested itinerary:
+
 {clean_text(itinerary)}
 
 Accommodation:
+
 {format_list(accommodation)}
 
 Local cuisine:
+
 {format_list(cuisine)}
 
 Local culture:
+
 {clean_text(culture)}
 
 Safety information:
+
 {clean_text(safety)}
 """
 
@@ -197,11 +206,33 @@ def load_tourism_documents(
         )
 
         documents.append({
-            "destination_name": destination.get(
-                "destination_name",
-                ""
-            ),
-            "text": document
+
+            "destination_name":
+                destination.get(
+                    "destination_name",
+                    ""
+                ),
+
+            "state":
+                destination.get(
+                    "state",
+                    ""
+                ),
+
+            "district":
+                destination.get(
+                    "district",
+                    ""
+                ),
+
+            "region":
+                destination.get(
+                    "region",
+                    ""
+                ),
+
+            "text":
+                document
         })
 
     return documents

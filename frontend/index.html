@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BharatYatraLM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="splashScreen" class="splash-screen">
+
+        <div class="splash-content">
+
+            <div class="splash-logo">
+                <span class="orange">Bharat</span><span class="splash-dark">Yatra</span><span class="green">LM</span>
+            </div>
+
+            <p class="splash-tagline">
+                Intelligence for India's journeys
+            </p>
+
+            <div class="india-loader">
+                <div class="loader-ring"></div>
+                <div class="loader-core"></div>
+            </div>
+
+            <p class="loading-text">
+                Exploring India...
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div id="mainApp" class="main-app">
+
+        <header class="topbar">
+
+            <div class="brand">
+
+                <div class="brand-logo">
+                    <span class="orange">B</span><span class="brand-dark">Y</span><span class="green">LM</span>
+                </div>
+
+                <div class="brand-name">
+                    BharatYatraLM
+                </div>
+
+            </div>
+
+
+            <div class="topbar-actions">
+
+                <button id="themeToggle" class="theme-toggle">
+
+                    <span id="themeIcon">☾</span>
+
+                    <span id="themeText">
+                        Dark Mode
+                    </span>
+
+                </button>
+
+                <button id="newChatButton" class="new-chat">
+                    + New Chat
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <main class="chat-app">
+
+            <section id="emptyState" class="empty-state">
+
+                <div class="empty-logo">
+                    <span class="orange">Bharat</span><span class="empty-dark">Yatra</span><span class="green">LM</span>
+                </div>
+
+                <h1>
+                    Explore India with AI
+                </h1>
+
+                <p>
+                    Ask about destinations, attractions, travel plans,
+                    nearby places and experiences across India.
+                </p>
+
+
+                <div class="example-prompts">
+
+                    <button class="example-prompt">
+
+                        <span>Goa</span>
+
+                        What should I explore in Goa?
+
+                    </button>
+
+
+                    <button class="example-prompt">
+
+                        <span>Itinerary</span>
+
+                        Plan a trip through India
+
+                    </button>
+
+
+                    <button class="example-prompt">
+
+                        <span>Discover</span>
+
+                        Find peaceful places to visit
+
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <section id="chatMessages" class="chat-messages"></section>
+
+
+            <div class="input-wrapper">
+
+                <div class="input-box">
+
+                    <textarea
+                        id="userInput"
+                        rows="1"
+                        placeholder="Ask BharatYatraLM anything..."
+                    ></textarea>
+
+
+                    <button
+                        id="voiceButton"
+                        class="voice-button"
+                        aria-label="Use voice input"
+                        title="Voice input"
+                    >
+
+                        <svg
+                            id="voiceIcon"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+
+                            <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"></path>
+
+                            <path d="M19 11a7 7 0 0 1-14 0"></path>
+
+                            <path d="M12 18v4"></path>
+
+                            <path d="M8 22h8"></path>
+
+                        </svg>
+
+                    </button>
+
+
+                    <button
+                        id="sendButton"
+                        class="send-button"
+                        aria-label="Send message"
+                    >
+                        ↑
+                    </button>
+
+                </div>
+
+                <div id="voiceStatus" class="voice-status">
+                </div>
+
+                <div class="input-note">
+                    BharatYatraLM can help you discover and plan journeys across India.
+                </div>
+
+            </div>
+
+        </main>
+
+
+        <footer class="footer">
+
+            <span>
+                Developed by Tharun K
+            </span>
+
+            <div class="footer-links">
+
+                <a
+                    href="https://www.linkedin.com/in/tharunk20408/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    LinkedIn
+                </a>
+
+                <span>•</span>
+
+                <a
+                    href="https://github.com/tharsna1208/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    GitHub
+                </a>
+
+            </div>
+
+        </footer>
+
+    </div>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>

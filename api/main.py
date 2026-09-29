@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.schemas import (
     ItineraryRequest,
@@ -8,7 +9,6 @@ from api.schemas import (
 )
 
 from data.itinerary_engine import ItineraryEngine
-
 from data.geospatial_engine import GeospatialEngine
 
 from rag.recommendation_engine import (
@@ -22,6 +22,15 @@ app = FastAPI(
     title="BharatYatraLM API",
     description="India Tourism AI API",
     version="1.0.0"
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 

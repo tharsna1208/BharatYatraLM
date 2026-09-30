@@ -9,13 +9,12 @@ const voiceButton = document.getElementById("voiceButton");
 const voiceStatus = document.getElementById("voiceStatus");
 const emptyState = document.getElementById("emptyState");
 const splashScreen = document.getElementById("splashScreen");
+const mainApp = document.getElementById("mainApp");
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://bharatyatralm.onrender.com";
 
 let recognition = null;
 let isListening = false;
-let isTypingResponse = false;
-
 
 function escapeHtml(text) {
     const div = document.createElement("div");
@@ -23,42 +22,41 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function scrollToMessage(message, smooth = true) {
+    if (!message) {
+        return;
+    }
 
-function scrollToLatest(behavior = "smooth") {
-    requestAnimationFrame(() => {
-        chatMessages.scrollTo({
-            top: chatMessages.scrollHeight,
-            behavior: behavior
-        });
-
-        window.scrollTo({
-            top: document.documentElement.scrollHeight,
-            behavior: behavior
-        });
+    message.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        block: "center"
     });
 }
 
+function scrollToBottom() {
+    window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "smooth"
+    });
+}
 
-function addMessage(content, sender = "bot") {
+function addUserMessage(text) {
+    if (emptyState) {
+        emptyState.style.display = "none";
+    }
 
     const message = document.createElement("div");
 
-    if (sender === "user") {
-        message.className = "message user-message";
-    } else {
-        message.className = "message bot-message";
-    }
-
+    message.className =
+        "message user-message";
 
     const label = document.createElement("div");
 
-    label.className = "message-label";
+    label.className =
+        "message-label";
 
     label.textContent =
-        sender === "user"
-            ? "You"
-            : "BharatYatraLM";
-
+        "You";
 
     const messageText =
         document.createElement("div");
@@ -66,38 +64,20 @@ function addMessage(content, sender = "bot") {
     messageText.className =
         "message-text";
 
-    messageText.innerHTML =
-        content;
-
+    messageText.textContent =
+        text;
 
     message.appendChild(label);
     message.appendChild(messageText);
 
     chatMessages.appendChild(message);
 
-    scrollToLatest();
-
-    return messageText;
+    requestAnimationFrame(() => {
+        scrollToMessage(message);
+    });
 }
-
-
-function addUserMessage(text) {
-
-    if (emptyState) {
-        emptyState.style.display = "none";
-    }
-
-    addMessage(
-        escapeHtml(text),
-        "user"
-    );
-
-    scrollToLatest();
-}
-
 
 function showTyping() {
-
     const message =
         document.createElement("div");
 
@@ -106,7 +86,6 @@ function showTyping() {
 
     message.id =
         "typingMessage";
-
 
     const label =
         document.createElement("div");
@@ -117,32 +96,29 @@ function showTyping() {
     label.textContent =
         "BharatYatraLM";
 
-
-    const bubble =
+    const messageText =
         document.createElement("div");
 
-    bubble.className =
-        "typing";
+    messageText.className =
+        "message-text typing";
 
-
-    bubble.innerHTML = `
+    messageText.innerHTML = `
         <span></span>
         <span></span>
         <span></span>
     `;
 
-
     message.appendChild(label);
-    message.appendChild(bubble);
+    message.appendChild(messageText);
 
     chatMessages.appendChild(message);
 
-    scrollToLatest();
+    requestAnimationFrame(() => {
+        scrollToMessage(message);
+    });
 }
 
-
 function removeTyping() {
-
     const typingMessage =
         document.getElementById(
             "typingMessage"
@@ -153,260 +129,205 @@ function removeTyping() {
     }
 }
 
+function prepareAnimatedContent(content) {
+    const container =
+        document.createElement("div");
 
-function typeResponse(element, html) {
+    container.innerHTML =
+        content;
 
-    return new Promise(resolve => {
+    const walker =
+        document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT
+        );
 
-        isTypingResponse = true;
+    const textNodes = [];
 
-        const temp =
-            document.createElement("div");
-
-        temp.innerHTML = html;
-
-
-        const nodes =
-            Array.from(temp.childNodes);
-
-
-        element.innerHTML = "";
-
-        let nodeIndex = 0;
-
-
-        function processNode() {
-
-            if (nodeIndex >= nodes.length) {
-
-                isTypingResponse = false;
-
-                scrollToLatest();
-
-                resolve();
-
-                return;
-            }
-
-
-            const originalNode =
-                nodes[nodeIndex];
-
-
-            if (
-                originalNode.nodeType ===
-                Node.TEXT_NODE
-            ) {
-
-                typeTextNode(
-                    element,
-                    originalNode.textContent,
-                    () => {
-                        nodeIndex++;
-                        processNode();
-                    }
-                );
-
-            } else {
-
-                const newElement =
-                    document.createElement(
-                        originalNode.nodeName
-                    );
-
-
-                Array.from(
-                    originalNode.attributes || []
-                ).forEach(attribute => {
-
-                    newElement.setAttribute(
-                        attribute.name,
-                        attribute.value
-                    );
-                });
-
-
-                element.appendChild(
-                    newElement
-                );
-
-
-                typeElementContents(
-                    newElement,
-                    originalNode,
-                    () => {
-                        nodeIndex++;
-                        processNode();
-                    }
-                );
-            }
+    while (walker.nextNode()) {
+        if (
+            walker.currentNode.nodeValue.trim()
+        ) {
+            textNodes.push(
+                walker.currentNode
+            );
         }
-
-
-        processNode();
-    });
-}
-
-
-function typeElementContents(
-    target,
-    source,
-    callback
-) {
-
-    const children =
-        Array.from(source.childNodes);
-
-
-    if (children.length === 0) {
-
-        callback();
-
-        return;
     }
 
+    const wordSpans = [];
 
-    let index = 0;
+    textNodes.forEach(node => {
+        const text =
+            node.nodeValue;
 
+        const parts =
+            text.split(/(\s+)/);
 
-    function processChild() {
+        const fragment =
+            document.createDocumentFragment();
 
-        if (index >= children.length) {
+        parts.forEach(part => {
+            if (/^\s+$/.test(part)) {
+                fragment.appendChild(
+                    document.createTextNode(
+                        part
+                    )
+                );
+            } else if (part) {
+                const span =
+                    document.createElement(
+                        "span"
+                    );
 
-            callback();
+                span.textContent =
+                    part;
 
-            return;
-        }
+                span.style.opacity =
+                    "0";
 
+                span.style.transition =
+                    "opacity 0.12s ease";
 
-        const child =
-            children[index];
+                fragment.appendChild(
+                    span
+                );
 
+                wordSpans.push(
+                    span
+                );
+            }
+        });
+
+        node.parentNode.replaceChild(
+            fragment,
+            node
+        );
+    });
+
+    return {
+        container,
+        wordSpans
+    };
+}
+
+async function animateBotMessage(content) {
+    const message =
+        document.createElement("div");
+
+    message.className =
+        "message bot-message";
+
+    const label =
+        document.createElement("div");
+
+    label.className =
+        "message-label";
+
+    label.textContent =
+        "BharatYatraLM";
+
+    const messageText =
+        document.createElement("div");
+
+    messageText.className =
+        "message-text";
+
+    const prepared =
+        prepareAnimatedContent(
+            content
+        );
+
+    messageText.appendChild(
+        prepared.container
+    );
+
+    message.appendChild(
+        label
+    );
+
+    message.appendChild(
+        messageText
+    );
+
+    chatMessages.appendChild(
+        message
+    );
+
+    requestAnimationFrame(() => {
+        scrollToMessage(
+            message,
+            false
+        );
+    });
+
+    let lastScroll = 0;
+
+    for (
+        let i = 0;
+        i < prepared.wordSpans.length;
+        i++
+    ) {
+        const word =
+            prepared.wordSpans[i];
+
+        word.style.opacity =
+            "1";
 
         if (
-            child.nodeType ===
-            Node.TEXT_NODE
+            i === 0 ||
+            i % 3 === 0 ||
+            i ===
+                prepared.wordSpans.length - 1
         ) {
+            const now =
+                Date.now();
 
-            typeTextNode(
-                target,
-                child.textContent,
-                () => {
-
-                    index++;
-
-                    processChild();
-                }
-            );
-
-        } else {
-
-            const newElement =
-                document.createElement(
-                    child.nodeName
+            if (
+                now - lastScroll >
+                70
+            ) {
+                scrollToMessage(
+                    message,
+                    true
                 );
 
-
-            Array.from(
-                child.attributes || []
-            ).forEach(attribute => {
-
-                newElement.setAttribute(
-                    attribute.name,
-                    attribute.value
-                );
-            });
-
-
-            target.appendChild(
-                newElement
-            );
-
-
-            typeElementContents(
-                newElement,
-                child,
-                () => {
-
-                    index++;
-
-                    processChild();
-                }
-            );
-        }
-    }
-
-
-    processChild();
-}
-
-
-function typeTextNode(
-    target,
-    text,
-    callback
-) {
-
-    const words =
-        text.split(/(\s+)/);
-
-
-    let index = 0;
-
-
-    function addNextWord() {
-
-        if (index >= words.length) {
-
-            callback();
-
-            return;
+                lastScroll =
+                    now;
+            }
         }
 
-
-        target.appendChild(
-            document.createTextNode(
-                words[index]
-            )
-        );
-
-
-        index++;
-
-
-        scrollToLatest("auto");
-
-
-        setTimeout(
-            addNextWord,
-            35
+        await new Promise(
+            resolve =>
+                setTimeout(
+                    resolve,
+                    28
+                )
         );
     }
 
-
-    addNextWord();
+    scrollToMessage(
+        message,
+        true
+    );
 }
-
 
 function formatItinerary(data) {
-
     if (!data) {
         return "I couldn't generate an itinerary.";
     }
 
-
     let html = `
         <div class="response-title">
-            ${escapeHtml(data.destination || "")} itinerary
+            ${escapeHtml(
+                data.destination || ""
+            )} itinerary
         </div>
     `;
-
 
     if (
         data.minimum_days !== undefined &&
         data.maximum_days !== undefined
     ) {
-
         html += `
             <div class="response-info">
                 Recommended duration:
@@ -415,101 +336,88 @@ function formatItinerary(data) {
         `;
     }
 
-
-    if (data.ideal_days !== undefined) {
-
-        html += `
-            <div class="response-info">
-                Ideal duration:
-                ${data.ideal_days} days
-            </div>
-        `;
-    }
-
-
     if (
         Array.isArray(data.days) &&
         data.days.length > 0
     ) {
-
         html += `
             <div class="itinerary-list">
         `;
 
-
         data.days.forEach(day => {
-
             html += `
                 <div class="itinerary-item">
 
                     <div class="itinerary-day">
-                        ${escapeHtml(day.day || "")}
+                        ${escapeHtml(
+                            day.day || ""
+                        )}
                     </div>
 
                     <div class="itinerary-reason">
-                        ${escapeHtml(day.reason || "")}
+                        ${escapeHtml(
+                            day.reason || ""
+                        )}
                     </div>
 
                 </div>
             `;
         });
 
-
         html += `
             </div>
         `;
     }
 
-
     return html;
 }
 
-
 function formatNearby(data) {
-
     if (
         !data ||
         !Array.isArray(data.results)
     ) {
-
         return "I couldn't find nearby destinations.";
     }
 
-
-    if (data.results.length === 0) {
-
+    if (
+        data.results.length === 0
+    ) {
         return "I couldn't find nearby destinations within the requested radius.";
     }
-
 
     let html = `
         <div class="response-title">
             Nearby destinations around
-            ${escapeHtml(data.destination || "")}
+            ${escapeHtml(
+                data.destination || ""
+            )}
         </div>
 
         <div class="nearby-list">
     `;
 
-
     data.results.forEach(place => {
-
         const distance =
-            Number(place.distance_km);
-
+            Number(
+                place.distance_km
+            );
 
         html += `
             <div class="nearby-item">
 
                 <div class="nearby-name">
                     ${escapeHtml(
-                        place.destination_name || ""
+                        place.destination_name ||
+                        ""
                     )}
                 </div>
 
                 <div class="nearby-distance">
                     ${
-                        Number.isFinite(distance)
+                        Number.isFinite(
+                            distance
+                        )
                             ? distance.toFixed(1)
                             : "N/A"
                     } km away
@@ -519,26 +427,20 @@ function formatNearby(data) {
         `;
     });
 
-
     html += `
         </div>
     `;
 
-
     return html;
 }
 
-
 function formatRecommendations(data) {
-
     if (
         !Array.isArray(data) ||
         data.length === 0
     ) {
-
         return "I couldn't find matching destinations.";
     }
-
 
     let html = `
         <div class="response-title">
@@ -548,9 +450,7 @@ function formatRecommendations(data) {
         <div class="recommendation-list">
     `;
 
-
     data.forEach((place, index) => {
-
         html += `
             <div class="recommendation-item">
 
@@ -562,20 +462,28 @@ function formatRecommendations(data) {
 
                     <div class="recommendation-name">
                         ${escapeHtml(
-                            place.destination_name || ""
+                            place.destination_name ||
+                            ""
                         )}
                     </div>
 
                     <div class="recommendation-details">
                         Trip:
-                        ${place.ideal_trip_days ?? "N/A"} days
+                        ${
+                            place.ideal_trip_days ??
+                            "N/A"
+                        } days
                         · Safety:
-                        ${place.safety_rating ?? "N/A"}/10
+                        ${
+                            place.safety_rating ??
+                            "N/A"
+                        }/10
                     </div>
 
                     <div class="recommendation-explanation">
                         ${escapeHtml(
-                            place.explanation || ""
+                            place.explanation ||
+                            ""
                         )}
                     </div>
 
@@ -585,49 +493,42 @@ function formatRecommendations(data) {
         `;
     });
 
-
     html += `
         </div>
     `;
 
-
     return html;
 }
 
-
 function formatChat(data, message) {
-
     if (message) {
-        return escapeHtml(message);
+        return escapeHtml(
+            message
+        );
     }
-
 
     if (
         data &&
         data.answer
     ) {
-
         return escapeHtml(
             data.answer
         );
     }
 
-
     return "I couldn't generate a response.";
 }
 
-
 function formatResponse(response) {
-
     const intent =
         response.intent;
 
     const data =
         response.data;
 
-
-    if (intent === "itinerary") {
-
+    if (
+        intent === "itinerary"
+    ) {
         return `
             <div class="response-intro">
                 ${escapeHtml(
@@ -640,9 +541,9 @@ function formatResponse(response) {
         `;
     }
 
-
-    if (intent === "nearby") {
-
+    if (
+        intent === "nearby"
+    ) {
         return `
             <div class="response-intro">
                 ${escapeHtml(
@@ -655,9 +556,9 @@ function formatResponse(response) {
         `;
     }
 
-
-    if (intent === "recommendation") {
-
+    if (
+        intent === "recommendation"
+    ) {
         return `
             <div class="response-intro">
                 ${escapeHtml(
@@ -670,41 +571,34 @@ function formatResponse(response) {
         `;
     }
 
-
     return formatChat(
         data,
         response.message
     );
 }
 
-
 async function sendMessage() {
-
-    if (isTypingResponse) {
+    if (!chatInput) {
         return;
     }
 
-
     const message =
         chatInput.value.trim();
-
 
     if (!message) {
         return;
     }
 
+    addUserMessage(
+        message
+    );
 
-    addUserMessage(message);
-
-    chatInput.value = "";
+    chatInput.value =
+        "";
 
     showTyping();
 
-    sendButton.disabled = true;
-
-
     try {
-
         const response =
             await fetch(
                 `${API_URL}/chat`,
@@ -717,78 +611,63 @@ async function sendMessage() {
                     },
 
                     body: JSON.stringify({
-                        message: message
+                        message:
+                            message
                     })
                 }
             );
 
-
         if (!response.ok) {
-
             throw new Error(
                 `HTTP ${response.status}`
             );
         }
 
-
         const data =
             await response.json();
 
-
         removeTyping();
 
-
-        const messageElement =
-            addMessage(
-                "",
-                "bot"
+        const formatted =
+            formatResponse(
+                data
             );
 
-
-        const formattedResponse =
-            formatResponse(data);
-
-
-        await typeResponse(
-            messageElement,
-            formattedResponse
+        await animateBotMessage(
+            formatted
         );
-
 
     } catch (error) {
-
         removeTyping();
 
-
-        addMessage(
-            "I couldn't connect to BharatYatraLM. Please make sure the FastAPI server is running.",
-            "bot"
+        await animateBotMessage(
+            "I couldn't connect to BharatYatraLM. Please try again in a moment."
         );
 
-
-        console.error(error);
-
-
-    } finally {
-
-        sendButton.disabled = false;
-
-        chatInput.focus();
+        console.error(
+            "BharatYatraLM API error:",
+            error
+        );
     }
 }
 
-
 function startNewChat() {
-
-    chatMessages.innerHTML = "";
-
-    if (emptyState) {
-        emptyState.style.display = "";
+    if (chatMessages) {
+        chatMessages.innerHTML =
+            "";
     }
 
-    chatInput.value = "";
+    if (emptyState) {
+        emptyState.style.display =
+            "";
+    }
 
-    chatInput.focus();
+    if (chatInput) {
+        chatInput.value =
+            "";
+
+        chatInput.focus();
+    }
 
     window.scrollTo({
         top: 0,
@@ -796,26 +675,22 @@ function startNewChat() {
     });
 }
 
-
 function attachExamplePromptEvents() {
-
     const prompts =
         document.querySelectorAll(
             ".example-prompt"
         );
 
-
     prompts.forEach(prompt => {
-
         prompt.addEventListener(
             "click",
             () => {
-
-                const text =
-                    prompt.textContent.trim();
+                if (!chatInput) {
+                    return;
+                }
 
                 chatInput.value =
-                    text;
+                    prompt.textContent.trim();
 
                 sendMessage();
             }
@@ -823,23 +698,21 @@ function attachExamplePromptEvents() {
     });
 }
 
-
 function setupVoiceRecognition() {
+    if (!voiceButton) {
+        return;
+    }
 
     const SpeechRecognition =
         window.SpeechRecognition ||
         window.webkitSpeechRecognition;
 
-
     if (!SpeechRecognition) {
-
         voiceButton.addEventListener(
             "click",
             () => {
-
-                addMessage(
-                    "Voice input is not supported by this browser. Please use Chrome or another browser with Speech Recognition support.",
-                    "bot"
+                animateBotMessage(
+                    "Voice input is not supported by this browser. Please use Chrome or another browser with Speech Recognition support."
                 );
             }
         );
@@ -847,10 +720,8 @@ function setupVoiceRecognition() {
         return;
     }
 
-
     recognition =
         new SpeechRecognition();
-
 
     recognition.lang =
         "en-IN";
@@ -861,132 +732,105 @@ function setupVoiceRecognition() {
     recognition.interimResults =
         true;
 
+    recognition.onstart =
+        () => {
+            isListening =
+                true;
 
-    recognition.onstart = () => {
-
-        isListening = true;
-
-        voiceButton.classList.add(
-            "listening"
-        );
-
-
-        if (voiceStatus) {
-
-            voiceStatus.textContent =
-                "Listening...";
-
-            voiceStatus.classList.add(
-                "active"
+            voiceButton.classList.add(
+                "listening"
             );
-        }
-    };
 
+            if (voiceStatus) {
+                voiceStatus.textContent =
+                    "Listening...";
+            }
+        };
 
     recognition.onresult =
         event => {
-
-            let transcript = "";
-
+            let transcript =
+                "";
 
             for (
-                let i = event.resultIndex;
-                i < event.results.length;
+                let i =
+                    event.resultIndex;
+                i <
+                    event.results.length;
                 i++
             ) {
-
                 transcript +=
                     event.results[i][0]
                         .transcript;
             }
 
-
-            chatInput.value =
-                transcript;
+            if (chatInput) {
+                chatInput.value =
+                    transcript;
+            }
         };
 
-
-    recognition.onend = () => {
-
-        isListening = false;
-
-        voiceButton.classList.remove(
-            "listening"
-        );
-
-
-        if (voiceStatus) {
-
-            voiceStatus.textContent =
-                "";
-
-            voiceStatus.classList.remove(
-                "active"
-            );
-        }
-    };
-
-
-    recognition.onerror =
-        error => {
-
-            console.error(error);
-
-            isListening = false;
+    recognition.onend =
+        () => {
+            isListening =
+                false;
 
             voiceButton.classList.remove(
                 "listening"
             );
 
-
             if (voiceStatus) {
-
                 voiceStatus.textContent =
                     "";
-
-                voiceStatus.classList.remove(
-                    "active"
-                );
             }
         };
 
+    recognition.onerror =
+        error => {
+            console.error(
+                "Speech recognition error:",
+                error
+            );
+
+            isListening =
+                false;
+
+            voiceButton.classList.remove(
+                "listening"
+            );
+
+            if (voiceStatus) {
+                voiceStatus.textContent =
+                    "";
+            }
+        };
 
     voiceButton.addEventListener(
         "click",
         () => {
-
             if (isListening) {
-
                 recognition.stop();
-
             } else {
-
                 recognition.start();
             }
         }
     );
 }
 
-
 function updateThemeButton() {
-
     const darkModeEnabled =
         document.body.classList.contains(
             "dark-mode"
         );
 
-
     if (themeIcon) {
-
         themeIcon.textContent =
             darkModeEnabled
                 ? "☀"
                 : "☾";
     }
 
-
     if (themeText) {
-
         themeText.textContent =
             darkModeEnabled
                 ? "Light Mode"
@@ -994,40 +838,37 @@ function updateThemeButton() {
     }
 }
 
-
 function setupTheme() {
-
     const savedTheme =
         localStorage.getItem(
             "bharatyatralm-theme"
         );
 
-
-    if (savedTheme === "dark") {
-
+    if (
+        savedTheme === "dark"
+    ) {
         document.body.classList.add(
             "dark-mode"
         );
     }
 
-
     updateThemeButton();
 
+    if (!themeToggle) {
+        return;
+    }
 
     themeToggle.addEventListener(
         "click",
         () => {
-
             document.body.classList.toggle(
                 "dark-mode"
             );
-
 
             const darkModeEnabled =
                 document.body.classList.contains(
                     "dark-mode"
                 );
-
 
             localStorage.setItem(
                 "bharatyatralm-theme",
@@ -1036,70 +877,98 @@ function setupTheme() {
                     : "light"
             );
 
-
             updateThemeButton();
         }
     );
 }
 
+function hideSplashScreen() {
+    if (splashScreen) {
+        splashScreen.classList.add(
+            "hide"
+        );
 
-function setupSplashScreen() {
+        splashScreen.style.opacity =
+            "0";
 
-    window.addEventListener(
-        "load",
-        () => {
+        splashScreen.style.visibility =
+            "hidden";
 
-            setTimeout(
-                () => {
+        splashScreen.style.pointerEvents =
+            "none";
 
-                    if (splashScreen) {
+        splashScreen.style.display =
+            "none";
+    }
 
-                        splashScreen.classList.add(
-                            "hide"
-                        );
-                    }
+    if (mainApp) {
+        mainApp.classList.add(
+            "visible"
+        );
 
-                },
-                700
-            );
-        }
+        mainApp.style.display =
+            "flex";
+
+        mainApp.style.opacity =
+            "1";
+
+        mainApp.style.visibility =
+            "visible";
+    }
+}
+
+function initializeBharatYatraLM() {
+    if (sendButton) {
+        sendButton.addEventListener(
+            "click",
+            sendMessage
+        );
+    }
+
+    if (chatInput) {
+        chatInput.addEventListener(
+            "keydown",
+            event => {
+                if (
+                    event.key ===
+                        "Enter" &&
+                    !event.shiftKey
+                ) {
+                    event.preventDefault();
+
+                    sendMessage();
+                }
+            }
+        );
+    }
+
+    if (newChatButton) {
+        newChatButton.addEventListener(
+            "click",
+            startNewChat
+        );
+    }
+
+    attachExamplePromptEvents();
+
+    setupVoiceRecognition();
+
+    setupTheme();
+
+    setTimeout(
+        hideSplashScreen,
+        700
     );
 }
 
-
-sendButton.addEventListener(
-    "click",
-    sendMessage
-);
-
-
-chatInput.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key === "Enter" &&
-            !event.shiftKey
-        ) {
-
-            event.preventDefault();
-
-            sendMessage();
-        }
-    }
-);
-
-
-newChatButton.addEventListener(
-    "click",
-    startNewChat
-);
-
-
-attachExamplePromptEvents();
-
-setupVoiceRecognition();
-
-setupTheme();
-
-setupSplashScreen();
+if (
+    document.readyState ===
+    "loading"
+) {
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeBharatYatraLM
+    );
+} else {
+    initializeBharatYatraLM();
+}

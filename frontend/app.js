@@ -11,7 +11,7 @@ const emptyState = document.getElementById("emptyState");
 const splashScreen = document.getElementById("splashScreen");
 const mainApp = document.getElementById("mainApp");
 
-const API_URL = "https://bharatyatralm.onrender.com";
+const API_URL = window.location.origin;
 
 let recognition = null;
 let isListening = false;

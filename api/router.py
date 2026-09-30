@@ -1,10 +1,7 @@
 import re
 
-
 def detect_intent(message):
-
     text = message.lower().strip()
-
 
     itinerary_patterns = [
         r"\bplan\b.*\btrip\b",
@@ -19,17 +16,21 @@ def detect_intent(message):
         r"\bwhat\s+should\s+i\s+do\b"
     ]
 
-
     nearby_patterns = [
         r"\bnearby\b",
         r"\bnear\s+me\b",
+        r"\bnear\b",
         r"\bplaces\s+near\b",
         r"\bdestinations\s+near\b",
+        r"\bwhat\s+(?:is|are)\s+near\b",
+        r"\bwhat\s+(?:can|should)\s+i\s+(?:visit|see)\s+near\b",
+        r"\bplaces\s+around\b",
+        r"\bdestinations\s+around\b",
+        r"\bwhat\s+(?:is|are)\s+around\b",
         r"\bclose\s+to\b",
         r"\bclose\s+by\b",
         r"\baround\b"
     ]
-
 
     recommendation_patterns = [
         r"\brecommend\b",
@@ -68,26 +69,16 @@ def detect_intent(message):
         r"\bnightlife\s+destinations\b"
     ]
 
-
     for pattern in itinerary_patterns:
-
         if re.search(pattern, text):
-
             return "itinerary"
 
-
     for pattern in nearby_patterns:
-
         if re.search(pattern, text):
-
             return "nearby"
 
-
     for pattern in recommendation_patterns:
-
         if re.search(pattern, text):
-
             return "recommendation"
-
 
     return "chat"

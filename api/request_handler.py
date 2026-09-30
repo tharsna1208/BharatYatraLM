@@ -2,6 +2,7 @@ import re
 from api.router import detect_intent
 from api.request_parser import TourismRequestParser
 
+
 class TourismRequestHandler:
     def __init__(self, destinations):
         self.parser = TourismRequestParser(destinations)
@@ -31,6 +32,24 @@ class TourismRequestHandler:
             or trip_days is not None
         )
 
+    def has_explicit_destination_request(self, message):
+        text = message.lower().strip()
+
+        patterns = [
+            r"\btrip\s+to\s+([a-z][a-z\s&()'-]+)",
+            r"\btravel\s+to\s+([a-z][a-z\s&()'-]+)",
+            r"\bjourney\s+to\s+([a-z][a-z\s&()'-]+)",
+            r"\bvacation\s+to\s+([a-z][a-z\s&()'-]+)",
+            r"\bgo\s+to\s+([a-z][a-z\s&()'-]+)",
+            r"\bvisit\s+([a-z][a-z\s&()'-]+)"
+        ]
+
+        for pattern in patterns:
+            if re.search(pattern, text):
+                return True
+
+        return False
+
     def process(self, message):
         if self.pending_recommendation:
             if self.has_recommendation_preferences(message):
@@ -56,6 +75,7 @@ class TourismRequestHandler:
             intent == "itinerary"
             and parsed_request["destination"] is None
             and len(parsed_request["interests"]) > 0
+            and not self.has_explicit_destination_request(message)
         ):
             parsed_request["intent"] = "recommendation"
 

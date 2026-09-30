@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from api.schemas import (
     ItineraryRequest,
     RecommendationRequest,
@@ -44,25 +45,19 @@ recommendation_engine = TourismRecommendationEngine()
 geospatial_engine = GeospatialEngine()
 rag_chatbot = RAGChatbot()
 
-
 def find_destination(message):
     text = message.lower()
-
     for destination in tourism_data:
         name = destination.get(
             "destination_name",
             ""
         )
-
         if name and name.lower() in text:
             return destination
-
     return None
-
 
 def is_exploration_question(message):
     text = message.lower().strip()
-
     patterns = [
         r"\bwhat\s+should\s+i\s+explore\b",
         r"\bwhat\s+can\s+i\s+explore\b",
@@ -75,31 +70,25 @@ def is_exploration_question(message):
         r"\bthings\s+to\s+explore\b",
         r"\bthings\s+to\s+see\b"
     ]
-
     for pattern in patterns:
         if re.search(pattern, text):
             return True
-
     return False
-
 
 def build_exploration_answer(destination):
     name = destination.get(
         "destination_name",
         ""
     )
-
     attractions = destination.get(
         "attractions",
         []
     )
-
     if not attractions:
         attractions = destination.get(
             "primary_attractions",
             []
         )
-
     if isinstance(
         attractions,
         str
@@ -109,24 +98,20 @@ def build_exploration_answer(destination):
             for item in attractions.split(",")
             if item.strip()
         ]
-
     if not attractions:
         return (
             f"I don't have specific attraction "
             f"information available for {name}."
         )
-
     attraction_text = ", ".join(
         str(item)
         for item in attractions
     )
-
     return (
         f"If you're exploring {name}, "
         f"some of the main attractions include "
         f"{attraction_text}."
     )
-
 
 @app.get("/health")
 def health_check():
@@ -134,7 +119,6 @@ def health_check():
         "status": "ok",
         "project": "BharatYatraLM"
     }
-
 
 @app.post("/itinerary")
 def generate_itinerary(
@@ -146,9 +130,7 @@ def generate_itinerary(
         interests=request.interests,
         traveler_type=request.traveler_type
     )
-
     return result
-
 
 @app.post("/recommend")
 def recommend_destinations(
@@ -160,7 +142,6 @@ def recommend_destinations(
         trip_days=request.trip_days,
         top_k=request.top_k
     )
-
     return {
         "status": "success",
         "preferences": request.preferences,
@@ -168,7 +149,6 @@ def recommend_destinations(
         "trip_days": request.trip_days,
         "recommendations": recommendations
     }
-
 
 @app.post("/nearby")
 def find_nearby_destinations(
@@ -179,16 +159,13 @@ def find_nearby_destinations(
         radius_km=request.radius_km,
         top_k=request.top_k
     )
-
     return result
-
 
 @app.post("/chat")
 def chat(request: ChatRequest):
     parsed_request = request_handler.process(
         request.message
     )
-
     intent = parsed_request["intent"]
 
     if (
@@ -199,12 +176,10 @@ def chat(request: ChatRequest):
         destination = find_destination(
             request.message
         )
-
         if destination:
             answer = build_exploration_answer(
                 destination
             )
-
             return {
                 "intent": "chat",
                 "message": answer,
@@ -232,7 +207,6 @@ def chat(request: ChatRequest):
                 "traveler_type"
             ]
         )
-
         return {
             "intent": "itinerary",
             "message": "Here is your personalized itinerary.",
@@ -247,7 +221,6 @@ def chat(request: ChatRequest):
             ],
             top_k=5
         )
-
         return {
             "intent": "recommendation",
             "message": "Here are some destinations that match your preferences.",
@@ -262,7 +235,6 @@ def chat(request: ChatRequest):
             radius_km=300,
             top_k=5
         )
-
         return {
             "intent": "nearby",
             "message": "Here are some nearby destinations.",
@@ -272,7 +244,6 @@ def chat(request: ChatRequest):
     result = rag_chatbot.answer(
         request.message
     )
-
     return {
         "intent": "chat",
         "message": result.get(
@@ -281,3 +252,12 @@ def chat(request: ChatRequest):
         ),
         "data": result
     }
+
+app.mount(
+    "/",
+    StaticFiles(
+        directory="frontend",
+        html=True
+    ),
+    name="frontend"
+)
